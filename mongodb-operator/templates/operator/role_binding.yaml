@@ -15,6 +15,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: mongodb-kubernetes-operator
+  namespace: {{ .Release.Namespace }}
 roleRef:
   kind: Role
   name: {{ include "mongodb.operator.fullname" . }}-operator

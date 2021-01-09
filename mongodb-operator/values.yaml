@@ -44,3 +44,5 @@ operator:
     tag: 0.3.0
     # MongoDB Operator image pull policy
     imagePullPolicy: Always
+  podSecurityPolicy:
+    enabled: false
