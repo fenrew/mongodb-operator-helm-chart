@@ -89,3 +89,13 @@ rules:
   - patch
   - update
   - watch
+{{- if .Values.operator.podSecurityPolicy.enabled }}
+  - apiGroups:
+      - extensions
+    resourceNames:
+      - {{ include "mongodb.operator.fullname" . }}-operator
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - use
+{{- end -}}
