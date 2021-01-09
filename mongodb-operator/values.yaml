@@ -1,29 +1,43 @@
 # Enable or disable this helm chart
 enabled: true
 
+# Additional labels added to every resource
 additionalLabels: {}
 
+# MongoDB resources
 mongodb:
+
+  # Annotiations added to MongoDB resources
   annotations: {}
+
+  # Values related to the container image of MongoDB
   image:
+
     # MongoDB image version
     tag: 4.2.6
+
   # MongoDB feature compatibility version
   featureCompatibilityVersion: 4.2.6
+
   # The amount of MongoDB members in the cluster
   members: 3
   security:
     authentication:
       modes: ["SCRAM"]
+
   # users are MongoDB users used for authentication.
   # users can be removed to not create any MongoDB users.
   users:
+
       # Name of the MongoDB user. Each users name must be unique
     - name: my-user
+
       # Password of the MongoDB user
       password: 58LObjiMpxcjP1sMDW
+
       # The name of the database the MongoDB user will be stored in
       db: admin
+
       # The user's role
       roles:
         - name: clusterAdmin
@@ -31,18 +45,31 @@ mongodb:
         - name: userAdminAnyDatabase
           db: admin
       scramCredentialsSecretName: my-scram
+
+  #Type of Secret set for the MongoDB user. The Secret will be deleted after installation
   secretType: "Opaque"
 
+# All values related to the MongoDB Kubernetes Operator
 operator:
+
   # The amount of MongoDB Operator replicas
   replicas: 1
+
+  # Image pull secrets needed to pull the MongoDB Kubernetes Operator. It can be left empty if you use the community images
   imagePullSecrets: []
+
+  # Values related to the container image of MongoDB Kubernetes Operator
   image:
-    # MongoDB Operator image name
+
+    # MongoDB Kubernetes Operator image name
     name: quay.io/mongodb/mongodb-kubernetes-operator
-    # MongoDB Operator image version
+
+    # MongoDB Kubernetes Operator image version
     tag: 0.3.0
-    # MongoDB Operator image pull policy
+
+    # MongoDB Kubernetes Operator image pull policy
     imagePullPolicy: Always
+
+  # Set to true to enable pod security policy for MongoDB Kubernetes Operator
   podSecurityPolicy:
     enabled: false
