@@ -1,0 +1,46 @@
+# Enable or disable this helm chart
+enabled: true
+
+additionalLabels: {}
+
+mongodb:
+  annotations: {}
+  image:
+    # MongoDB image version
+    tag: 4.2.6
+  # MongoDB feature compatibility version
+  featureCompatibilityVersion: 4.2.6
+  # The amount of MongoDB members in the cluster
+  members: 3
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  # users are MongoDB users used for authentication.
+  # users can be removed to not create any MongoDB users.
+  users:
+      # Name of the MongoDB user. Each users name must be unique
+    - name: my-user
+      # Password of the MongoDB user
+      password: 58LObjiMpxcjP1sMDW
+      # The name of the database the MongoDB user will be stored in
+      db: admin
+      # The user's role
+      roles:
+        - name: clusterAdmin
+          db: admin
+        - name: userAdminAnyDatabase
+          db: admin
+      scramCredentialsSecretName: my-scram
+  secretType: "Opaque"
+
+operator:
+  # The amount of MongoDB Operator replicas
+  replicas: 1
+  imagePullSecrets: []
+  image:
+    # MongoDB Operator image name
+    name: quay.io/mongodb/mongodb-kubernetes-operator
+    # MongoDB Operator image version
+    tag: 0.3.0
+    # MongoDB Operator image pull policy
+    imagePullPolicy: Always

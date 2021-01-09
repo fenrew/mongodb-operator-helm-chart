@@ -1,0 +1,65 @@
+{{ if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mongodb.operator.fullname" . }}-operator
+  labels:
+    {{- include "mongodb.operator.labels" . | nindent 4 }}
+    {{- if .Values.additionalLabels -}}
+    {{- toYaml .Values.additionalLabels | nindent 4 -}}    
+    {{- end -}}
+    {{- if .Values.mongodb.additionalLabels }}
+    {{- with .Values.mongodb.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.operator.replicas | default 1 }}
+  selector:
+    matchLabels:
+      {{ include "mongodb.operator.selectorLabels" . }}-operator
+  template:
+    metadata:
+      labels:
+        {{- include "mongodb.operator.labels" . | nindent 8 }}
+        {{- if .Values.additionalLabels -}}
+        {{- toYaml .Values.additionalLabels | nindent 8 -}}    
+        {{- end -}}
+        {{- if .Values.mongodb.additionalLabels }}
+        {{- with .Values.mongodb.additionalLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- end }}
+        {{ include "mongodb.operator.selectorLabels" . }}-operator
+    spec:
+      {{- with .Values.operator.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: mongodb-kubernetes-operator
+      containers:
+        - name: {{ include "mongodb.operator.fullname" . }}-operator
+          image: {{ .Values.operator.image.name }}:{{ .Values.operator.image.tag }}
+          command:
+            - mongodb-kubernetes-operator
+          imagePullPolicy: {{ .Values.operator.image.imagePullPolicy }}
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "{{ include "mongodb.operator.fullname" . }}-operator"
+            - name: AGENT_IMAGE # The MongoDB Agent the operator will deploy to manage MongoDB deployments
+              value: quay.io/mongodb/mongodb-agent:10.19.0.6562-1
+            - name: VERSION_UPGRADE_HOOK_IMAGE
+              value: quay.io/mongodb/mongodb-kubernetes-operator-version-upgrade-post-start-hook:1.0.2
+            - name: MONGODB_IMAGE
+              value: "library/mongo"
+            - name: MONGODB_REPO_URL
+              value: "registry.hub.docker.com"
+{{- end -}}

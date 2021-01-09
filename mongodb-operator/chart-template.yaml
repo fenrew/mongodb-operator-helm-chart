@@ -1,0 +1,204 @@
+NAME: mongodb
+LAST DEPLOYED: Sat Jan  9 00:34:47 2021
+NAMESPACE: default
+STATUS: pending-install
+REVISION: 1
+TEST SUITE: None
+HOOKS:
+MANIFEST:
+---
+# Source: mongodb/templates/operator/service_account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mongodb-operator
+  labels:
+    helm.sh/chart: mongodb-0.1.0
+    app.kubernetes.io/version: "4.2.6"
+---
+# Source: mongodb/templates/cr/cr_secret.yaml
+# The user credentials will be generated from this secret
+# once the credentials are generated, this secret is no longer required
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-user-password
+  labels:
+    helm.sh/chart: mongodb-0.1.0
+    app.kubernetes.io/version: "4.2.6"
+type: Opaque
+stringData:
+  password: "58LObjiMpxcjP1sMDW"
+---
+# Source: mongodb/templates/operator/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: mongodb-kubernetes-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - services/finalizers
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - create
+- apiGroups:
+  - apps
+  resourceNames:
+  - mongodb-kubernetes-operator
+  resources:
+  - deployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  - deployments
+  verbs:
+  - get
+- apiGroups:
+  - mongodb.com
+  resources:
+  - '*'
+  - mongodbs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+# Source: mongodb/templates/operator/role_binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mongodb-kubernetes-operator
+subjects:
+- kind: ServiceAccount
+  name: mongodb-kubernetes-operator
+roleRef:
+  kind: Role
+  name: mongodb-kubernetes-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: mongodb/templates/operator/operator.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb-operator
+  labels:
+    helm.sh/chart: mongodb-0.1.0
+    app.kubernetes.io/version: "4.2.6"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mongodb-operator
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: mongodb-0.1.0
+        app.kubernetes.io/version: "4.2.6"
+        app.kubernetes.io/name: mongodb-operator
+    spec:
+      serviceAccountName: mongodb-operator
+      containers:
+        - name: mongodb-operator
+          image: quay.io/mongodb/mongodb-kubernetes-operator:0.3.0
+          command:
+            - mongodb-kubernetes-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "mongodb-kubernetes-operator"
+            - name: AGENT_IMAGE # The MongoDB Agent the operator will deploy to manage MongoDB deployments
+              value: quay.io/mongodb/mongodb-agent:10.19.0.6562-1
+            - name: VERSION_UPGRADE_HOOK_IMAGE
+              value: quay.io/mongodb/mongodb-kubernetes-operator-version-upgrade-post-start-hook:1.0.2
+            - name: MONGODB_IMAGE
+              value: "library/mongo"
+            - name: MONGODB_REPO_URL
+              value: "registry.hub.docker.com"
+---
+# Source: mongodb/templates/cr/mongodb.com_v1_mongodb_cr.yaml
+apiVersion: mongodb.com/v1
+kind: MongoDB
+metadata:
+  name: mongodb
+  labels:
+    helm.sh/chart: mongodb-0.1.0
+    app.kubernetes.io/version: "4.2.6"
+  annotations:
+spec:
+  members: 3
+  type: ReplicaSet
+  version: "4.2.6"
+  featureCompatibilityVersion: "4.2.6"
+  security:
+    authentication:
+      modes: [SCRAM]
+  users:
+    - passwordSecretRef:
+        name: my-user-password
+      scramCredentialsSecretName: my-user-scram
+      name: my-user
+      db: admin
+      roles:
+      - db: admin
+        name: clusterAdmin
+      - db: admin
+        name: userAdminAnyDatabase
+

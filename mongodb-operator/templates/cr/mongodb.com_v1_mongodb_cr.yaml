@@ -1,0 +1,42 @@
+{{ if .Values.enabled }}
+apiVersion: mongodb.com/v1
+kind: MongoDB
+metadata:
+  name: {{ include "mongodb.operator.fullname" . }}
+  labels:
+    {{- include "mongodb.operator.labels" . | nindent 4 }}
+    {{- if .Values.additionalLabels -}}
+    {{- toYaml .Values.additionalLabels | nindent 4 -}}    
+    {{- end -}}
+    {{- if .Values.mongodb.additionalLabels }}
+    {{- with .Values.mongodb.additionalLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- end }}
+  annotations:
+    {{- with .Values.mongodb.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  members: {{ .Values.mongodb.members | default 3 }}
+  type: ReplicaSet
+  version: {{ .Values.mongodb.image.tag | default "4.2.6" | quote }}
+  {{- if .Values.mongodb.featureCompatibilityVersion }}
+  featureCompatibilityVersion: {{ .Values.mongodb.featureCompatibilityVersion | quote }}
+  {{- end }}
+  security:
+    authentication:
+      modes: {{ .Values.mongodb.security.authentication.modes }}
+  {{- if .Values.mongodb.users }}
+  users:
+  {{- range $key, $value := .Values.mongodb.users }}
+    - passwordSecretRef:
+        name: {{ $value.name }}-password
+      scramCredentialsSecretName: {{ $value.name }}-scram
+      name: {{ $value.name}}
+      db: {{ $value.db}}
+      roles:
+      {{- $value.roles | toYaml | nindent 6}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
